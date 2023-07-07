@@ -1,10 +1,10 @@
-﻿using Anomoly.ChatTags.models;
+﻿using Anomoly.ChatTags.Helpers;
+using Anomoly.ChatTags.Models;
 using Anomoly.ChatTags.Services;
-using Anomoly.Core.Library.UnturnedStore;
-using Rocket.API.Collections;
+using Rocket.API.Serialisation;
 using Rocket.Core;
 using Rocket.Core.Plugins;
-using Rocket.Core.Utils;
+using Rocket.Core.Steam;
 using Rocket.Unturned;
 using Rocket.Unturned.Chat;
 using Rocket.Unturned.Events;
@@ -12,37 +12,39 @@ using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using Logger = Rocket.Core.Logging.Logger;
 
 namespace Anomoly.ChatTags
 {
-    public class ChatTagsPlugin: RocketPlugin<ChatTagPluginConfiguration>
+    public class ChatTagsPlugin: RocketPlugin<ChatTagsConfiguration>
     {
         public static ChatTagsPlugin Instance { get; private set; }
 
-        private const int US_PRODUCT_ID = 1473;
+        //private const int US_PRODUCT_ID = 1473;
 
-        private Dictionary<string, string> _playerAvatars;
-        private ChatFormatService _formatService;
-
+        private Dictionary<string, string> playerAvatars;
+        private ChatFormatService formatService;
 
         protected override void Load()
         {
-            base.Load();
-
             Instance = this;
 
-            _formatService = new ChatFormatService();
-            
-            _playerAvatars = new Dictionary<string, string>();
-            foreach(var client in Provider.clients)
+            playerAvatars = new Dictionary<string, string>();
+            formatService = new ChatFormatService();
+
+            foreach (SteamPlayer client in Provider.clients)
             {
-                var player = UnturnedPlayer.FromSteamPlayer(client);
+                UnturnedPlayer player = UnturnedPlayer.FromSteamPlayer(client);
 
-                var profile = player.SteamProfile;
+                ThreadHelper.RunAsynchronously(() =>
+                {
+                    Profile profile = player.SteamProfile;
 
-                _playerAvatars.Add(player.Id, profile.AvatarIcon.ToString());
+                    ThreadHelper.RunSynchronously(() =>
+                    {
+                        playerAvatars.Add(player.Id, profile.AvatarIcon.ToString());
+                    });
+                });
             }
 
             UnturnedPlayerEvents.OnPlayerChatted += UnturnedPlayerEvents_OnPlayerChatted;
@@ -53,95 +55,112 @@ namespace Anomoly.ChatTags
             Logger.Log($"{string.Format("ChatTags v{0}", Assembly.GetName().Version.ToString())} by Anomoly has loaded");
             Logger.Log("Need support? Join my Discord @ https://discord.gg/rVH9e7Kj9y");
 
-            bool isUpdateToDate = UnturnedStoreAPI.IsUpdateToDate(US_PRODUCT_ID, Assembly.GetName().Version);
-            if (!isUpdateToDate)
-                Logger.LogWarning("[Update Detected] ChatTags has update! Please download the latest version @ https://unturnedstore.com/products/1473");
+            //bool isUpdateToDate = UnturnedStoreAPI.IsUpdateToDate(US_PRODUCT_ID, Assembly.GetName().Version);
+            //if (!isUpdateToDate)
+            //    Logger.LogWarning("[Update Detected] ChatTags has update! Please download the latest version @ https://unturnedstore.com/products/1473");
         }
-
-        
 
         protected override void Unload()
         {
-            base.Unload();
-
             Instance = null;
-            _formatService = null;
+            formatService = null;
+
             UnturnedPlayerEvents.OnPlayerChatted -= UnturnedPlayerEvents_OnPlayerChatted;
             U.Events.OnPlayerConnected -= Events_OnPlayerConnected;
             U.Events.OnPlayerDisconnected -= Events_OnPlayerDisconnected;
-            _playerAvatars.Clear();
-            _playerAvatars = null;
+            
+            playerAvatars.Clear();
+            playerAvatars = null;
 
             Logger.Log($"{string.Format("ChatTags v{0}", Assembly.GetName().Version.ToString())} by Anomoly has unloaded");
             Logger.Log("Need support? Join my Discord @ https://discord.gg/rVH9e7Kj9y");
         }
 
-        public override TranslationList DefaultTranslations => new TranslationList();
-
         #region Events
-        private void UnturnedPlayerEvents_OnPlayerChatted(Rocket.Unturned.Player.UnturnedPlayer player, ref UnityEngine.Color color, string message, SDG.Unturned.EChatMode chatMode, ref bool cancel)
+        private void UnturnedPlayerEvents_OnPlayerChatted(UnturnedPlayer player, ref UnityEngine.Color color, string message, SDG.Unturned.EChatMode chatMode, ref bool cancel)
         {
-
-            if (message.StartsWith("/")) { return; }
-
+            if (message.StartsWith("/")) 
+            { 
+                return; 
+            }
 
             cancel = true;
 
-            var msgColor = color;
-
-            if (Configuration.Instance.BaseColor != null)
+            UnityEngine.Color msgColor = color;
+            if (!string.IsNullOrEmpty(Configuration.Instance.BaseColor))
+            {
                 msgColor = UnturnedChat.GetColorFromName(Configuration.Instance.BaseColor, color);
+            }
 
-            var format = _formatService.GetPlayerFormat(player);
+            ChatFormat format = formatService.GetPlayerFormat(player);
 
-            var formattedMsg = _formatService.Format(player, format, chatMode, message);
+            string formattedMsg = formatService.Format(player, format, chatMode, message);
 
             bool useRichText = true;
             if (format != null)
-                useRichText = format.UseRichText;
-
-            TaskDispatcher.QueueOnMainThread(() =>
             {
-                switch (chatMode)
+                useRichText = format.UseRichText;
+            }
+            
+            if (chatMode == EChatMode.LOCAL)
+            {
+                float areaRange = 16384f;
+                List<Player> playersInRange;
+                playersInRange = new List<Player>();
+                PlayerTool.getPlayersInRadius(player.Position, areaRange, playersInRange);
+
+                foreach (Player playerInRange in playersInRange)
                 {
-                    case EChatMode.GLOBAL:
-                        ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), null, chatMode, _playerAvatars[player.Id], useRichText);
-                        break;
-                    case EChatMode.LOCAL:
-                        float num = 16384f;
-                        foreach(var client in Provider.clients)
-                        {
-                            if((client.player.transform.position - player.Position).sqrMagnitude < (double)num)
-                                ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), client, chatMode, _playerAvatars[player.Id], useRichText);
-                        }
-                        break;
-                    case EChatMode.GROUP:
-                        foreach(var client in Provider.clients)
-                        {
-                            if(client.player.quests.isMemberOfSameGroupAs(player.Player))
-                                ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), client, chatMode, _playerAvatars[player.Id], useRichText);
-                        }
-                        break;
-                    default:
-                        break;
+                    SteamPlayer client = playerInRange.channel.owner;
+                    string avatarUrl = playerAvatars[player.Id];
+                    ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), client, chatMode, avatarUrl, useRichText);
                 }
-            });
+            } else if (chatMode == EChatMode.GROUP)
+            {
+                foreach (Player serverPlayer in PlayerTool.EnumeratePlayers())
+                {
+                    if (serverPlayer.quests.isMemberOfSameGroupAs(player.Player))
+                    {
+                        SteamPlayer client = serverPlayer.channel.owner;
+                        string avatarUrl = playerAvatars[player.Id];
+                        ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), client, chatMode, avatarUrl, useRichText);
+                    }
+                }
+            } else
+            {
+                string avatarUrl = playerAvatars[player.Id];
+                ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), null, chatMode, avatarUrl, useRichText);
+            }
         }
 
         private void Events_OnPlayerConnected(UnturnedPlayer player)
         {
-            var profile = player.SteamProfile;
+            // Download the player Steam profile asynchronously, because it blocks the main thread
+            ThreadHelper.RunAsynchronously(() =>
+            {
+                Profile profile = player.SteamProfile;
 
-            if (_playerAvatars.ContainsKey(player.Id))
-                _playerAvatars[player.Id] = profile.AvatarIcon.ToString();
-            else
-                _playerAvatars.Add(player.Id, profile.AvatarIcon.ToString());
+                // callback
+                ThreadHelper.RunSynchronously(() =>
+                {
+                    if (playerAvatars.ContainsKey(player.Id))
+                    {
+                        playerAvatars[player.Id] = profile.AvatarIcon.ToString();
+                    }
+                    else
+                    {
+                        playerAvatars.Add(player.Id, profile.AvatarIcon.ToString());
+                    }
+                });
+            });            
         }
 
         private void Events_OnPlayerDisconnected(UnturnedPlayer player)
         {
-            if (_playerAvatars.ContainsKey(player.Id))
-                _playerAvatars.Remove(player.Id);
+            if (playerAvatars.ContainsKey(player.Id))
+            {
+                playerAvatars.Remove(player.Id);
+            }                
         }
 
         #endregion
@@ -149,12 +168,9 @@ namespace Anomoly.ChatTags
 
         public List<ChatTag> GetPlayerTags(UnturnedPlayer player)
         {
-
-            var permissions = R.Permissions.GetPermissions(player);
+            List<Permission> permissions = R.Permissions.GetPermissions(player);
 
             return Instance.Configuration.Instance.ChatTags.Where(x => permissions.Any(p => p.Name.Equals(x.Permission))).ToList();
         }
-
-        
     }
 }

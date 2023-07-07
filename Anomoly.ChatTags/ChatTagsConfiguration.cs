@@ -1,39 +1,42 @@
-﻿using Anomoly.ChatTags.models;
+﻿using Anomoly.ChatTags.Constants;
+using Anomoly.ChatTags.Models;
 using Rocket.API;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
 namespace Anomoly.ChatTags
 {
-    public class ChatTagPluginConfiguration : IRocketPluginConfiguration
+    // I renamed the class and with this attribute the plugin won't break because xml
+    // will use the previous class name as root for serialization/deserialization
+    [XmlRoot("ChatTagPluginConfiguration")]
+    public class ChatTagsConfiguration : IRocketPluginConfiguration
     {
-        [XmlArray("ChatTags")]
-        [XmlArrayItem("ChatTag")]
-        public List<ChatTag> ChatTags { get; set; }
-
-        [XmlArray("ChatFormats")]
-        [XmlArrayItem("ChatFormat")]
-        public List<ChatFormat> ChatFormats { get; set; }
-
-        public ChatModeConfiguration ChatModePrefixes { get; set; }
-
+        // Initialize in the constructor, so the users who update the plugin will have a default value instead of null
+        public string DefaultChatFormat { get; set; } = ChatTagsConstants.DEFAULT_FORMAT;
         public string BaseColor { get; set; }
+
+        public List<ChatTag> ChatTags { get; set; }
+        public List<ChatFormat> ChatFormats { get; set; }
+        public ChatModeConfig ChatModePrefixes { get; set; }        
 
         public void LoadDefaults()
         {
+            DefaultChatFormat = ChatTagsConstants.DEFAULT_FORMAT;
+            BaseColor = "white";
+
             ChatTags = new List<ChatTag>()
             {
                 new ChatTag()
                 {
                     Permission ="tag.admin",
-                    Prefix = "<color=blue>Admin</color>",
+                    Prefix = "{color=blue}Admin{/color}",
                     Suffix = ""
                 },
                 new ChatTag()
                 {
                     Permission = "tag.vip",
                     Prefix = "",
-                    Suffix = "<color=yellow>VIP</color>"
+                    Suffix = "{color=yellow}VIP{/color}"
                 }
             };
             ChatFormats = new List<ChatFormat>()
@@ -45,23 +48,12 @@ namespace Anomoly.ChatTags
                     UseRichText = true,
                 }
             };
-            ChatModePrefixes = new ChatModeConfiguration()
+            ChatModePrefixes = new ChatModeConfig()
             {
                 World = "W",
                 Area = "A",
                 Group = "G",
             };
-
-            BaseColor = "white";
-        }
-
-        public class ChatModeConfiguration
-        {
-            public string World { get; set; }
-
-            public string Area { get; set; }
-
-            public string Group { get; set; }
         }
     }
 }

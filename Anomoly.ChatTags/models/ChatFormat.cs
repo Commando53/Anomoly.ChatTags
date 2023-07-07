@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 
-namespace Anomoly.ChatTags.models
+namespace Anomoly.ChatTags.Models
 {
     public class ChatFormat
     {

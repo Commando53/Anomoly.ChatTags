@@ -1,40 +1,39 @@
-﻿using Anomoly.ChatTags.models;
-using Rocket.API;
+﻿using Anomoly.ChatTags.Models;
+using Rocket.API.Serialisation;
 using Rocket.Core;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace Anomoly.ChatTags.Services
 {
     public class ChatFormatService
     {
-        private const string DEFAULT_FORMAT = "[{CHAT_MODE}] {PREFIXES}{PLAYER_NAME}{SUFFIXES}: {MESSAGE}";
-        private readonly ChatFormat[] _formats;
-        public ChatFormatService()
-        {
-            _formats = ChatTagsPlugin.Instance.Configuration.Instance.ChatFormats.ToArray();
-        }
+        private ChatTagsPlugin pluginInstance => ChatTagsPlugin.Instance;
+        private ChatTagsConfiguration configuration => pluginInstance.Configuration.Instance;
 
         public string Format(UnturnedPlayer player, ChatFormat format, EChatMode mode, string message)
         {
-            string formattedMessage = DEFAULT_FORMAT;
+            string formattedMessage = configuration.DefaultChatFormat;
 
             if (format != null)
+            {
                 formattedMessage = format.Format;
+            }                
 
-            var tags = ChatTagsPlugin.Instance.GetPlayerTags(player);
+            List<ChatTag> tags = pluginInstance.GetPlayerTags(player);
 
-            var prefixes = tags.Where(x => !string.IsNullOrEmpty(x.Prefix)).Select(x => x.Prefix).ToArray();
-            var suffixes = tags.Where(x => !string.IsNullOrEmpty(x.Suffix)).Select(x => x.Suffix).ToArray();
+            string[] prefixes = tags.Where(x => !string.IsNullOrEmpty(x.Prefix))
+                .Select(x => FormatRichText(x.Prefix))
+                .ToArray();
+            string[] suffixes = tags.Where(x => !string.IsNullOrEmpty(x.Suffix))
+                .Select(x => FormatRichText(x.Suffix))
+                .ToArray();
 
-            var prefixFormat = prefixes.Length > 0 ? $"[{string.Join(",", prefixes)}] " : string.Empty;
-            var suffixFormat = suffixes.Length > 0 ? $" [{string.Join(",", suffixes)}]" : string.Empty;
+            string prefixFormat = prefixes.Length > 0 ? $"[{string.Join(", ", prefixes)}] " : string.Empty;
+            string suffixFormat = suffixes.Length > 0 ? $" [{string.Join(", ", suffixes)}]" : string.Empty;
 
             formattedMessage = formattedMessage.Replace("{CHAT_MODE}", GetChatMode(mode));
             formattedMessage = formattedMessage.Replace("{PREFIXES}", prefixFormat);
@@ -42,30 +41,33 @@ namespace Anomoly.ChatTags.Services
             formattedMessage = formattedMessage.Replace("{SUFFIXES}", suffixFormat);
             formattedMessage = formattedMessage.Replace("{MESSAGE}", SerializeMessage(message));
 
-
             return formattedMessage;
+        }
+
+        private string FormatRichText(string text)
+        {
+            return text.Replace("{", "<").Replace("}", ">");
         }
 
         public ChatFormat GetPlayerFormat(UnturnedPlayer player)
         {
-            var permissions = R.Permissions.GetPermissions(player);
-            return _formats.FirstOrDefault(f => permissions.Any(p => p.Name.ToLower().Equals(f.Permission.ToLower())));
+            List<Permission> permissions = R.Permissions.GetPermissions(player);
+
+            return configuration.ChatFormats.FirstOrDefault(f => permissions.Any(p => p.Name.ToLower().Equals(f.Permission.ToLower())));
         }
 
         private string GetChatMode(EChatMode mode)
         {
-            var config = ChatTagsPlugin.Instance.Configuration;
-
             switch (mode)
             {
                 case EChatMode.LOCAL:
-                    return config.Instance.ChatModePrefixes.Area;
+                    return configuration.ChatModePrefixes.Area;
                 case EChatMode.GLOBAL:
-                    return config.Instance.ChatModePrefixes.World;
+                    return configuration.ChatModePrefixes.World;
                 case EChatMode.GROUP:
-                    return config.Instance.ChatModePrefixes.Group;
+                    return configuration.ChatModePrefixes.Group;
                 default:
-                    return "";
+                    return string.Empty;
             }
         }
 
