@@ -3,9 +3,10 @@
 	<PropertyGroup>
 		<TargetFramework>net461</TargetFramework>
 		<LangVersion>latest</LangVersion>
-		<Version>1.1.0</Version>
+		<Version>1.1.1</Version>
 		<AssemblyVersion>1.1.0</AssemblyVersion>
 		<RootNamespace>Anomoly.ChatTags</RootNamespace>
+		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 	</PropertyGroup>
 
 	<ItemGroup>

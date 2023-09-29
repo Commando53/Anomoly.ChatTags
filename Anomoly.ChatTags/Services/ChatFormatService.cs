@@ -53,7 +53,17 @@ namespace Anomoly.ChatTags.Services
         {
             List<Permission> permissions = R.Permissions.GetPermissions(player);
 
-            return configuration.ChatFormats.FirstOrDefault(f => permissions.Any(p => p.Name.ToLower().Equals(f.Permission.ToLower())));
+            var format =  configuration.ChatFormats.FirstOrDefault(f => permissions.Any(p => p.Name.ToLower().Equals(f.Permission.ToLower())));
+
+            if(format == null)
+                format = new ChatFormat()
+                {
+                    Format = configuration.DefaultChatFormat,
+                    Permission = "",
+                    UseRichText = true,
+                };
+
+            return format;
         }
 
         private string GetChatMode(EChatMode mode)

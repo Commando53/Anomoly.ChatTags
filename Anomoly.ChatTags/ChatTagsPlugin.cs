@@ -79,21 +79,16 @@ namespace Anomoly.ChatTags
         #region Events
         private void UnturnedPlayerEvents_OnPlayerChatted(UnturnedPlayer player, ref UnityEngine.Color color, string message, SDG.Unturned.EChatMode chatMode, ref bool cancel)
         {
-            if (message.StartsWith("/")) 
-            { 
-                return; 
-            }
+            if (message.StartsWith("/"))
+                return;
 
             cancel = true;
 
             UnityEngine.Color msgColor = color;
             if (!string.IsNullOrEmpty(Configuration.Instance.BaseColor))
-            {
                 msgColor = UnturnedChat.GetColorFromName(Configuration.Instance.BaseColor, color);
-            }
 
             ChatFormat format = formatService.GetPlayerFormat(player);
-
             string formattedMsg = formatService.Format(player, format, chatMode, message);
 
             bool useRichText = true;
@@ -101,6 +96,10 @@ namespace Anomoly.ChatTags
             {
                 useRichText = format.UseRichText;
             }
+
+            string avatar = null;
+            if(playerAvatars.ContainsKey(player.Id))
+                   avatar = playerAvatars[player.Id];
             
             if (chatMode == EChatMode.LOCAL)
             {
@@ -112,8 +111,7 @@ namespace Anomoly.ChatTags
                 foreach (Player playerInRange in playersInRange)
                 {
                     SteamPlayer client = playerInRange.channel.owner;
-                    string avatarUrl = playerAvatars[player.Id];
-                    ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), client, chatMode, avatarUrl, useRichText);
+                    ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), client, chatMode, avatar, useRichText);
                 }
             } else if (chatMode == EChatMode.GROUP)
             {
@@ -122,14 +120,12 @@ namespace Anomoly.ChatTags
                     if (serverPlayer.quests.isMemberOfSameGroupAs(player.Player))
                     {
                         SteamPlayer client = serverPlayer.channel.owner;
-                        string avatarUrl = playerAvatars[player.Id];
-                        ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), client, chatMode, avatarUrl, useRichText);
+                        ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), client, chatMode, avatar, useRichText);
                     }
                 }
             } else
             {
-                string avatarUrl = playerAvatars[player.Id];
-                ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), null, chatMode, avatarUrl, useRichText);
+                ChatManager.serverSendMessage(formattedMsg, msgColor, player.SteamPlayer(), null, chatMode, avatar, useRichText);
             }
         }
 
