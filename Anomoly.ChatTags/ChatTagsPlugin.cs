@@ -79,7 +79,7 @@ namespace Anomoly.ChatTags
         #region Events
         private void UnturnedPlayerEvents_OnPlayerChatted(UnturnedPlayer player, ref UnityEngine.Color color, string message, SDG.Unturned.EChatMode chatMode, ref bool cancel)
         {
-            if (message.StartsWith("/"))
+            if (message.StartsWith("/") || cancel)
                 return;
 
             cancel = true;

@@ -53,7 +53,7 @@ namespace Anomoly.ChatTags.Services
         {
             List<Permission> permissions = R.Permissions.GetPermissions(player);
 
-            var format =  configuration.ChatFormats.FirstOrDefault(f => permissions.Any(p => p.Name.ToLower().Equals(f.Permission.ToLower())));
+            var format =  configuration.ChatFormats.LastOrDefault(f => permissions.Any(p => p.Name.ToLower().Equals(f.Permission.ToLower())));
 
             if(format == null)
                 format = new ChatFormat()

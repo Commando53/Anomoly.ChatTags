@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net461</TargetFramework>
+		<TargetFramework>net48</TargetFramework>
 		<LangVersion>latest</LangVersion>
-		<Version>1.1.1</Version>
-		<AssemblyVersion>1.1.0</AssemblyVersion>
+		<Version>1.1.2</Version>
+		<AssemblyVersion>1.1.2</AssemblyVersion>
 		<RootNamespace>Anomoly.ChatTags</RootNamespace>
 		<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
 	</PropertyGroup>
