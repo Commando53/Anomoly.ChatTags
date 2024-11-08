@@ -15,6 +15,8 @@ namespace Anomoly.ChatTags
         public string DefaultChatFormat { get; set; } = ChatTagsConstants.DEFAULT_FORMAT;
         public string BaseColor { get; set; }
 
+        public bool UsePriorityMode { get; set; }
+
         public List<ChatTag> ChatTags { get; set; }
         public List<ChatFormat> ChatFormats { get; set; }
         public ChatModeConfig ChatModePrefixes { get; set; }        
@@ -23,7 +25,7 @@ namespace Anomoly.ChatTags
         {
             DefaultChatFormat = ChatTagsConstants.DEFAULT_FORMAT;
             BaseColor = "white";
-
+            UsePriorityMode = false;
             ChatTags = new List<ChatTag>()
             {
                 new ChatTag()

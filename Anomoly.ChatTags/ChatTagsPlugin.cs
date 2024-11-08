@@ -20,8 +20,6 @@ namespace Anomoly.ChatTags
     {
         public static ChatTagsPlugin Instance { get; private set; }
 
-        //private const int US_PRODUCT_ID = 1473;
-
         private Dictionary<string, string> playerAvatars;
         private ChatFormatService formatService;
 
@@ -54,10 +52,6 @@ namespace Anomoly.ChatTags
 
             Logger.Log($"{string.Format("ChatTags v{0}", Assembly.GetName().Version.ToString())} by Anomoly has loaded");
             Logger.Log("Need support? Join my Discord @ https://discord.gg/rVH9e7Kj9y");
-
-            //bool isUpdateToDate = UnturnedStoreAPI.IsUpdateToDate(US_PRODUCT_ID, Assembly.GetName().Version);
-            //if (!isUpdateToDate)
-            //    Logger.LogWarning("[Update Detected] ChatTags has update! Please download the latest version @ https://unturnedstore.com/products/1473");
         }
 
         protected override void Unload()
@@ -93,9 +87,7 @@ namespace Anomoly.ChatTags
 
             bool useRichText = true;
             if (format != null)
-            {
                 useRichText = format.UseRichText;
-            }
 
             string avatar = null;
             if(playerAvatars.ContainsKey(player.Id))
@@ -164,9 +156,21 @@ namespace Anomoly.ChatTags
 
         public List<ChatTag> GetPlayerTags(UnturnedPlayer player)
         {
-            List<Permission> permissions = R.Permissions.GetPermissions(player);
 
-            return Instance.Configuration.Instance.ChatTags.Where(x => permissions.Any(p => p.Name.Equals(x.Permission))).ToList();
+            if (Configuration.Instance.UsePriorityMode)
+            {
+                var tags = Configuration.Instance.ChatTags;
+                var group = R.Permissions.GetGroups(player, true).FirstOrDefault(g => g.Permissions.Any(p => tags.Any(t => t.Permission.Equals(p.Name))));
+
+                var tag = group?.Permissions.Select(p => tags.FirstOrDefault(t => t.Permission.Equals(p.Name))).FirstOrDefault(t => t != null);
+                return [tag];
+            }
+            else
+            {
+                List<Permission> permissions = R.Permissions.GetPermissions(player);
+
+                return Configuration.Instance.ChatTags.Where(x => permissions.Any(p => p.Name.Equals(x.Permission))).ToList();
+            }
         }
     }
 }
