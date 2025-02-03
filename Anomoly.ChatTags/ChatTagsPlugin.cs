@@ -81,7 +81,7 @@ namespace Anomoly.ChatTags
             cancel = true;
             if (do53MutePlugin.Instance.Mutes.Contains(do53MutePlugin.Instance.Mutes.Find(x => x.steamid64 == player.SteamPlayer().playerID.steamID.m_SteamID)))
             {
-                if (!(chatMode == EChatMode.GLOBAL && do53MutePlugin.Instance.Configuration.Instance.MuteGlobalChat || chatMode == EChatMode.LOCAL && do53MutePlugin.Instance.Configuration.Instance.MuteAreaChat || chatMode == EChatMode.GROUP && do53MutePlugin.Instance.Configuration.Instance.MuteGroupChat))
+                if (chatMode == EChatMode.GLOBAL && do53MutePlugin.Instance.Configuration.Instance.MuteGlobalChat || chatMode == EChatMode.LOCAL && do53MutePlugin.Instance.Configuration.Instance.MuteAreaChat || chatMode == EChatMode.GROUP && do53MutePlugin.Instance.Configuration.Instance.MuteGroupChat)
                 {
                     return;
                 }
