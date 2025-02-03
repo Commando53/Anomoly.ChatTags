@@ -1,6 +1,7 @@
-﻿using Anomoly.ChatTags.Helpers;
+using Anomoly.ChatTags.Helpers;
 using Anomoly.ChatTags.Models;
 using Anomoly.ChatTags.Services;
+using do53Mute;
 using Rocket.API.Serialisation;
 using Rocket.Core;
 using Rocket.Core.Plugins;
@@ -12,6 +13,8 @@ using Rocket.Unturned.Player;
 using SDG.Unturned;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using static UnityEngine.Scripting.GarbageCollector;
 using Logger = Rocket.Core.Logging.Logger;
 
 namespace Anomoly.ChatTags
@@ -75,9 +78,14 @@ namespace Anomoly.ChatTags
         {
             if (message.StartsWith("/") || cancel)
                 return;
-
             cancel = true;
-
+            if (do53MutePlugin.Instance.Mutes.Contains(do53MutePlugin.Instance.Mutes.Find(x => x.steamid64 == player.SteamPlayer().playerID.steamID.m_SteamID)))
+            {
+                if (!(chatMode == EChatMode.GLOBAL && do53MutePlugin.Instance.Configuration.Instance.MuteGlobalChat || chatMode == EChatMode.LOCAL && do53MutePlugin.Instance.Configuration.Instance.MuteAreaChat || chatMode == EChatMode.GROUP && do53MutePlugin.Instance.Configuration.Instance.MuteGroupChat))
+                {
+                    return;
+                }
+            }
             UnityEngine.Color msgColor = color;
             if (!string.IsNullOrEmpty(Configuration.Instance.BaseColor))
                 msgColor = UnturnedChat.GetColorFromName(Configuration.Instance.BaseColor, color);
